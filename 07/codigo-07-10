@@ -1,0 +1,137 @@
+
+#include <HCSR04.h> ;
+#define M1 3 // ESQUERDA
+#define M2 4 // ESQUERDA
+#define M3 6 // DIREITA
+#define M4 7 // DIREITA
+#define ATIVA A5
+#define ATIVA2 A4
+#define SEN1 9 // ESQUERDA
+#define SEN2 10 // DIREITA
+// 13/06
+// Aumento veloc reta => ton=80
+// Aumento veloc curva  => ton=50
+// Variáveis globais
+int acel = 0;
+int ton = 58;
+int contador = 0;
+
+HCSR04 hc(12, 13); //initialisation class HCSR04 (trig pin , echo pin)
+
+void setup()
+{
+
+  // Configurando os pinos como OUTPUT ou INPUT
+  pinMode(M1, OUTPUT);
+  pinMode(M2, OUTPUT);
+  pinMode(M3, OUTPUT);
+  pinMode(M4, OUTPUT);
+  pinMode(ATIVA, OUTPUT);
+  pinMode(ATIVA2, OUTPUT);
+  pinMode(SEN1, INPUT_PULLUP);
+  pinMode(SEN2, INPUT_PULLUP);
+  Serial.begin(9600);
+
+  digitalWrite(M1, HIGH);// VAI RETO ESQUERDO
+  digitalWrite(M2, LOW);// RE ESQUERDA
+  digitalWrite(M3, HIGH);// DIRETO DIREITA
+  digitalWrite(M4, LOW);// RE DIREITA
+  delay(100);
+  // Configurando o timer2 para interrupção a 8kHz
+  TCCR2A = 0; // zerar registrador TCCR2A
+  TCCR2B = 0; // zerar registrador TCCR2B
+  TCNT2 = 0; // inicializar valor do contador a 0
+  OCR2A = 129; // ajuste para 8kHz
+  TCCR2A |= (1 << WGM21); // ligar modo CTC
+  TCCR2B |= (1 << CS21); // setar prescaler a 8
+  TIMSK2 |= (1 << OCIE2A); // habilitar interrupção de comparação
+  sei(); // permitir interrupções
+}
+
+ISR(TIMER2_COMPA_vect) {
+  if (contador == 0) {
+    digitalWrite(ATIVA, HIGH);
+    digitalWrite(ATIVA2, HIGH);
+
+  }
+  if (contador == ton) {
+    digitalWrite(ATIVA, LOW);
+    digitalWrite(ATIVA2, LOW);
+
+  }
+  contador++;
+
+  if (contador == 160) {
+    contador = 0;
+  }
+}
+
+
+
+
+void loop()
+{
+  Serial.println(hc.dist()); // return curent distance in serial
+  delay(60);                 // we suggest to use over 60ms measurement cycle, in order to prevent trigger signal to the echo signal.
+
+  //if (acel == 1) {
+  //    ton = 40;
+  //  }
+  //  if (acel == 2) {
+  //    ton = 80;
+  //  }
+  //  if (acel == 3) {
+  //    ton = 120;
+  //  }
+  //  if (acel == 4) {
+  //    ton = 160;
+  //  }
+
+  //RETO
+  if (digitalRead(SEN1) == LOW && digitalRead(SEN2) == LOW) {
+    ton = 48;
+    digitalWrite(M1, HIGH);// VAI RETO ESQUERDO
+    digitalWrite(M2, LOW);// RE ESQUERDA
+    digitalWrite(M3, HIGH);// DIRETO DIREITA
+    digitalWrite(M4, LOW);// RE DIREITA
+  }
+
+  //ESQUERDA
+  if (digitalRead(SEN1) == LOW && digitalRead(SEN2) == HIGH) {
+    ton = 78;
+    digitalWrite(M1, HIGH);
+    digitalWrite(M2, LOW);
+    digitalWrite(M3, LOW);
+    digitalWrite(M4, HIGH);
+    delay(200);
+
+  }
+  else if (digitalRead(SEN1) == LOW && digitalRead(SEN2) == HIGH) {
+    ton = 50;
+  }
+
+  //DIREITO
+  if (digitalRead(SEN1) == HIGH && digitalRead(SEN2) == LOW) {
+    ton = 75;
+    digitalWrite(M1, LOW);
+    digitalWrite(M2, HIGH);
+    digitalWrite(M3, HIGH);
+    digitalWrite(M4, LOW);
+    delay(200);
+  }
+  else if (digitalRead(SEN1) == HIGH && digitalRead(SEN2) == LOW) {
+    ton = 50;
+  }
+
+  //LINHA PRETA
+  if (digitalRead(SEN1) == HIGH && digitalRead(SEN2) == HIGH) {
+    ton = 85;
+    digitalWrite(M1, HIGH);
+    digitalWrite(M2, LOW);
+    digitalWrite(M3, HIGH);
+    digitalWrite(M4, LOW);
+  }
+}
+
+
+
